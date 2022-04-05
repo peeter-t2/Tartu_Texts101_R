@@ -1,0 +1,5 @@
+install.packages("tidyverse")
+install.packages("tidytext")
+install.packages("gapminder")
+install.packages("grid")
+install.packages("png")
