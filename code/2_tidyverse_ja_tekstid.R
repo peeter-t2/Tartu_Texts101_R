@@ -10,7 +10,7 @@
 #' 
 #' Selles peatükis teeme algust tidyverse paketi kasutamisega. Paketid annavad R-i kasutades olulisi lisavõimalusi nagu sai kirjeldatud eelmises peatükis.
 #' 
-#' Iga pakett tuleb kõigepealt installida. Tavapakettide puhul piisab selleks käsust install.packages(), millele tuleb sisendiks anda paketi nimi jutumärkides. Käivitage järgnev käsk. Kui tidyverse pole arvutisse varem installitud, installib R selle nüüd. Kui pakett on juba installitud, püüab R seda uuendada.
+#' Iga pakett tuleb kõigepealt installida. Tavapakettide puhul piisab selleks käsust install.packages(), millele tuleb sisendiks anda paketi nimi jutumärkides. Käivitage järgnev käsk. Kui tidyverse pole arvutisse varem installitud, installib R selle nüüd. Kui pakett on juba installitud, püüab R seda uuendada. Arvutiklassis tuleb enne tidyverse-i uuesti installida rlang, kuna kohalik versioon on liiga vana.
 #' 
 #' 
 ## ---- eval=F-----------------------------------------------------------------------
