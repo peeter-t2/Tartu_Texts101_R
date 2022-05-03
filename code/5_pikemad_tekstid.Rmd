@@ -1,0 +1,971 @@
+---
+title: "Tidytext ja pikemad tekstid"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r setup,echo=F}
+# knit funktsioon nõuab natuke ühe parameetri seadmist et failid üles leitaks
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+```
+
+
+```{r}
+#Kõigepealt loeme sisse paketid
+library(tidyverse)
+library(tidytext)
+```
+
+
+## Pikema teksti avamine
+
+Kui eelmine kord vaatasime ainult väga lühidat tekstivormi laulusõnu, siis täna vaatame pikemaid vorme. Näiteks Tõde ja Õigus 1. köide on terves mahus antud siinses ilukirjanduse kollektsioonis https://datadoi.ee/handle/33/76. Need failid on meil hetkel kaasas, loeme selle sisse.
+
+```{r}
+raamat1 <- read_tsv("data/uiboaed_ilukirjandus/soned/Anton_Hansen_Tammsaare_Tode_ja_oigus_I.utf8",col_names = F) %>% rename(txt=X1)
+```
+
+Vaatame faili sisse, näeme, et failis on iga rida eraldi peatükk. Sellisel juhul saame me kasutada seda infot peatükkide nummerdamiseks, nii nagu eelmine kord nummerdasime järjekorda ja sõnade asukohta.
+
+```{r}
+
+raamat1 <- raamat1 %>% 
+  mutate(chapter=row_number())
+
+```
+
+Tükeldame tekstid sõnadeks unnest_tokens() käsuga paketist tidytext.
+
+```{r}
+
+raamat1_sonad <- raamat1 %>% 
+  unnest_tokens(word,txt)
+
+```
+
+Ja vaatame, mis pikkusega meie peatükid on.
+
+```{r}
+
+raamat1_sonad %>% 
+  count(chapter)
+
+```
+
+Et infost head ülevaadet saada, tasub tihti teha graafikuid.
+
+```{r}
+
+raamat1_sonad %>% 
+  count(chapter) %>% 
+  ggplot(aes(x=chapter,y=n))+
+  geom_col()
+
+```
+
+Peatükid siin on erineva pikkusega. Sellega peaks arvestama kui võrdleme peatükke teineteisega.
+
+Teeme ka sõnaloendi, vaatame seda.
+
+```{r}
+
+raamat1_sonaloend <- raamat1_sonad %>% 
+  count(word,sort=T)
+
+```
+
+Ja teeme sõnaloendi ka peatüki kaupa.
+
+```{r}
+
+peatykid_sonad <- raamat1_sonad %>% 
+  group_by(chapter) %>% 
+  count(word,sort=T)
+
+```
+
+Siin peaksime niisiis vaatama sagedust. Kui toornumbri järgi on sõna 'ta' peatükis 37 ka top 10-s, siis sagedus on tal selgelt väiksem.
+
+```{r}
+
+peatykid_sonad <- raamat1_sonad %>% 
+  group_by(chapter) %>% 
+  count(word,sort=T) %>% 
+  mutate(sagedus=n/sum(n))
+
+peatykid_sonad
+
+```
+
+Veel kasutasime eelmine kord käsku mutate() uute tulpade tegemiseks, ja row_number() ja n() ridade järjestuse ja arvu saamiseks. Selle põhjal saab välja arvutada sõna asukoha protsentides, jagades järjekorranumbri koguarvuga.
+
+```{r}
+
+asukohad <- raamat1_sonad %>% 
+  mutate(nr=row_number(), n=n()) %>% 
+  mutate(asukoht=nr/(n+1)) %>% 
+  ungroup()
+
+```
+
+Ja nende seast saab kasutada juba filter() käsku, et leida meile huvitavaid sõnu. Näiteks võtame raamatu põhiteemad "töö" ja "armastus".
+
+```{r}
+
+asukohad %>% 
+  filter(word=="töö")
+
+asukohad %>% 
+  filter(word=="armastus")
+
+```
+
+```{r}
+
+asukohad %>% 
+  filter(word=="töö"|word=="armastus") %>% 
+  ggplot(aes(x=asukoht,y=word))+
+  geom_point()
+
+
+```
+
+Nii võib otsida kõiksugu sõnu. Otsime näiteks sõnu kõrts ja kirik.
+
+```{r}
+
+asukohad %>% 
+  filter(word=="kõrts"|word=="kirik") %>% 
+  ggplot(aes(x=asukoht,y=word))+
+  geom_point()
+
+```
+
+## Regulaaravaldised
+
+Eelmine kord sai lõpus mainitud, et kui lihtsa loendamisega me saame küll täpseid vorme leida, siis mõnikord tuleb teha otsinguid paindlikumalt. Selleks on võimalik kasutada regulaaravaldisi, millest oli ka kodutöö. Kasutada saame selleks filtrisse sobivat käsku str_detect(), ja uude tulpa sobivat käsku str_extract().
+
+Kõige lihtsam regulaaravaldis on ilma erimärkideta, sel juhul me saame otsida sõnu, mis sisaldavad tähemärke seal sees. Nt otsides kõrtsi, saame kätte ka kõrtsmiku.
+
+```{r}
+
+asukohad %>% 
+  filter(str_detect(word,"kõrts")|str_detect(word,"kirik")) %>% 
+  ggplot(aes(x=asukoht,y=word))+
+  geom_point()
+
+```
+
+```{r}
+
+asukohad %>% 
+  filter(str_detect(word,"kõrts")|str_detect(word,"kirik")) %>% 
+  mutate(type=str_extract(word,"kõrts|kirik")) %>% 
+  ggplot(aes(x=asukoht,y=type))+
+  geom_point()
+
+
+```
+
+Proovi! Otsi mõnd sõna tekstist ja kuva nende asukohad samasuguses graafikus.
+
+```{r}
+
+
+
+
+
+```
+
+### Bigrammid ja trigrammid
+
+Üks huvitav teema võiks olla näiteks raha meie teoses, majapidamisest räägitakse palju ja tihti konkreetsete summadega. Leiame täitsa mitu vormi.
+
+```{r}
+
+asukohad %>% 
+  filter(str_detect(word,"rubla")) %>% 
+  ggplot(aes(x=asukoht,y=word))+
+  geom_point()
+
+```
+
+Nüüd võib tekkida küsimus, et mis summadest ikkagi juttu on. Seni oleme vaadanud teksti sõnade kaupa. Nüüd aga tahaks teada midagi eelneva sõna kohta. Selleks on mitu võimalust.
+
+Üks võimalus on võtta meie päringuvasted toortekstist välja. Seda saame teha str_extract() käsuga ja targa regulaaravaldisega. Proovime selle koostada.
+
+
+```{r}
+
+rahad <- raamat1 %>% 
+  mutate(leiud=str_extract_all(txt,"[a-zõäüöA-ZÕÄÖÜ]+ rubla"))
+
+#Meil tekivad tabelisse loendid. Me saame neid lahutada käsuga unnest() valides kõigepealt ainult leidude tulba. 
+rahad %>% 
+  select(leiud) %>% 
+  unnest()
+
+
+```
+
+
+Teine võimalus on koostada kohe alguses bigrammide loend. unnest_tokens() võimaldab seda teha mõne parameetri muutmisega ja teha ülevaatetabeleid ka sõnajärjenditest. Täpsemat infot saame vaadates dokumentatsiooni.
+
+```{r}
+?unnest_tokens
+```
+
+Bigramme saame teha järgmiselt.
+
+```{r}
+bigrammid <- raamat1 %>%
+  unnest_tokens(bigram, txt, token = "ngrams", n = 2, n_min = 2)
+```
+
+Nüüd võime rubla fraasid kätte saada puhtalt filter käsu abiga.
+
+```{r}
+bigrammid %>% 
+  filter(str_detect(bigram,"rubla"))
+```
+
+Me võime teha ka kolmgramme või viisgramme.
+
+```{r}
+trigrammid <- raamat1 %>%
+  unnest_tokens(trigram, txt, token = "ngrams", n = 3, n_min = 3)
+```
+
+
+```{r}
+viisgrammid <- raamat1 %>%
+  unnest_tokens(fivegram, txt, token = "ngrams", n = 5, n_min = 5)
+```
+
+```{r}
+
+trigrammid %>% 
+  count(trigram,sort=T)
+
+```
+
+
+```{r}
+
+viisgrammid %>% 
+  count(fivegram,sort=T)
+
+```
+
+Kombinatsiooniülesanne! Lisa viisgrammidele asukoha märgendus ja kuva populaarsemate (nt top 10) viisgrammide asukohad tekstis. Vihjed: mutate(), row_number(), n(), filter().
+
+```{r}
+
+
+
+```
+
+
+
+## Sisu iseloomustamine
+
+Meil oli eelmine kord juttu sisu iseloomustamisest sõnade kaudu. Nagu me teame, kõige sagedasemad sõnad on üldiselt üpris sagedased kõigis eestikeelsetes tekstides. Sisuliselt huvitavad sõnad on tihti palju tagapool.
+
+```{r}
+
+raamat1_sonaloend %>% 
+  head(10)
+
+raamat1_sonaloend %>% 
+  slice(200:220)
+
+```
+
+Sisulisi sõnu võib leida korpuseid omavahel võrreldes, aga kõige lihtsam viis on lihtsalt jätta kõrvale sõnad, mis üldiselt sisu palju edasi ei anna. Sõnu, mis me eemaldame tekstist nimetatakse stopsõnadeks, nende jaoks on olemas enamasti standardnimekirjad. Eestikeelne nimekiri on meie andmetega kaasas. Loeme selle sisse.
+
+```{r}
+stopwords <- read_csv("data/uiboaed_stopwords/estonian-stopwords.txt",col_names = F) %>% rename(word=X1)
+stopwords
+```
+
+Me saame siduda need sõnad oma andmetega join() käskude abil. Seekord kasutame varianti anti_join, kuna me tahame ühtivad read eemaldada.
+
+```{r}
+raamat1_sonaloend %>% 
+  anti_join(stopwords,"word")
+```
+
+Pärast seda ilmnevad juba sõnad, mis seda teost iseloomustavad. Antud juhul on selleks nimed. Kuna meie unnest_tokens() kaotas ära eristuse suurtähe ja väiketähe vahel, siis need nimed formaalselt enam sõnadest ei ei eristu. unnest_tokens() käsk on aga selle koha pealt paindlik. Vaadates unnest_tokens() dokumentatsiooni näeme aga, et seal on eraldi parameeter to_lower, mis on vaikimisi tõene. Muudame selle ära.
+
+```{r}
+
+raamat1_sonad2 <- raamat1 %>% 
+  unnest_tokens(word,txt,to_lower=F)
+
+raamat1_sonad2 %>% 
+  count(word,sort=T) %>% 
+  anti_join(stopwords,"word")
+
+```
+
+Siin võime eemaldada kõik suurtähega sõnad. Selleks kasutame jälle regulaaravaldisi. Hüüumärgiga saab str_detect() käsu teha eitavaks. Otsime vormi, mis EI sisalda suurtähti.
+
+```{r}
+
+raamat1_sonad2 %>% 
+  count(word,sort=T) %>% 
+  anti_join(stopwords,"word") %>% 
+  filter(!str_detect(word,"[A-ZÕÄÖÜ]"))
+
+```
+
+
+Nii võime vaadata juba iga peatüki kohta sisulisi sõnu, mis seda iseloomustaks, eemaldades siis stopsõnad. Trükime välja igast peatükist esimesed kümme rida.
+
+```{r}
+peatykid_sonad %>% 
+  anti_join(stopwords,"word") %>%
+  mutate(row_number=row_number()) %>% 
+  filter(row_number<11) %>% 
+  filter(chapter<11) %>% 
+  ggplot(aes(x=chapter,y=row_number,label=word))+
+  geom_label()
+```
+
+Võime ka siin nüüd jätta kõrvale suurtähtedega sõnad. Kas meil on tark suurtähed sisse jätta või mitte oleneb küsimusest. Muidu kui meil on sõna "ja" väikse ja suure tähega, siis loeb meie kood neid eraldi. Ja samuti on stopsõnade nimistu algselt ainult väikeste tähtedega. (Seda saab muidugi muuta.)
+
+```{r}
+peatykid_sonad %>% 
+  anti_join(stopwords,"word") %>% 
+  filter(!str_detect(word,"[A-ZÕÄÖÜ]")) %>%
+  mutate(row_number=row_number()) %>% 
+  filter(row_number<11) %>% 
+  filter(chapter<11) %>% 
+  ggplot(aes(x=chapter,y=row_number,label=word))+
+  geom_label()
+```
+
+
+LISAMATERJAL NÄIDISEKS: Tekstide sisu iseloomustamiseks on palju meetodeid. Üks teine viis selleni jõuda on otsida sõnu, mis iseloomustavad just seda tekstijuppi, aga mitte eriti teisi. Üks vahend, millele on mugav liides tehtud tidytextis on tf-idf (term frequency - inverse document frequency). Loe täpsemat sisu siit https://en.wikipedia.org/wiki/Tf-idf. Selle valemi aluseks on vaist, et kui sõna on sage ühes dokumendis, aga seda teistes tekstides tihti ei leidu, võiks seda pidada seda teksti eristavaks teistest ehk selle teksti märksõnaks. Selle arvutamiseks loetakse kokku kui palju on üht sõna konkreetses tekstis või tekstide kogumis ning korrutatakse läbi arvuga, mis iseloomustab kui paljudes tekstides seda on. Erinevaid variante sellest valemist on mitmeid ja see, milline neist on sobivaim konkreetse küsimuse lahendamiseks võib sõltuda korpuse suurusest, iseloomust või küsimusest endast. Me kasutame siin vaikevõimalust paketis.
+
+```{r}
+
+tf_idfs_peatykid <- raamat1_sonad %>% 
+  group_by(chapter) %>% 
+  count(word,sort=T) %>% 
+  bind_tf_idf(word,chapter,n) %>% 
+  arrange(desc(tf_idf))
+
+
+
+tf_idfs_peatykid %>% 
+  mutate(row_number=row_number()) %>% 
+  filter(row_number<11) %>% 
+  filter(chapter<11) %>% 
+  ggplot(aes(x=chapter,y=row_number,label=word))+
+  geom_label()
+
+```
+
+
+Proovi ka! Võta eristavad sõnad peatükid 10-20.
+
+```{r}
+
+
+
+
+
+
+```
+
+
+
+
+## Failide lugemine
+
+Samamoodi kui me vaatame eri peatükke teose sees võime vaadata ka eri teoseid.
+
+Seekord loeme andmetena sisse rohkem kui ühe tekstifaili. Tekstid pärinevad ikka siit: https://datadoi.ee/handle/33/76. map_df() käsu pärast ei pea praegu muretsema. Käsk otsib üles failid kataloogist soned, seob nad omavahel ja siis teeb uue tulba filename.
+
+```{r}
+ Sys.setenv(VROOM_CONNECTION_SIZE = "500000")
+
+filelist <- list.files("data/uiboaed_ilukirjandus/soned",full.names=T)
+texts <- map_df(filelist, ~ tibble(txt = read_lines(.x)) %>%
+                  mutate(filename = .x)) %>%
+                  mutate(filename= basename(filename))
+
+```
+
+Sisu võime vaadata taas muutujat sisse kirjutades.
+
+```{r}
+
+#texts
+
+```
+
+Seekord on meil materjale mitmest tekstist. Kasutades count() käsku saame kokku lugeda tekstiread, kus antud juhul oli igal real üks peatükk.
+
+```{r}
+
+texts %>% 
+  count(filename)
+
+```
+
+Paremaks ülevaateks võib selliseid asju kuvada.
+
+```{r}
+
+texts %>% 
+  count(filename) %>% 
+  ggplot(aes(y=filename,x=n))+
+  geom_col()
+
+```
+
+## Tekstide eeltöötlus
+
+Nummerdame peatükid ära.
+
+```{r}
+
+texts <- texts %>% 
+  group_by(filename) %>% 
+  mutate(chapter=row_number()) %>% 
+  ungroup()
+
+```
+
+Vaatame igas teoses teist ja kolmandat peatükki
+
+```{r}
+
+#texts %>% 
+#  filter(chapter==2|chapter==3)
+
+
+# Selleks on mitmeid võimalusi.
+#texts %>% 
+#  filter(chapter %in% c(2,3))
+
+```
+
+
+Teeme tekstidest sõnad.
+
+```{r}
+
+words <- texts %>% 
+  unnest_tokens(word, txt)
+
+```
+
+Vaatame hetkeks andmestiku sisse.
+
+```{r}
+
+words
+
+```
+
+## Tekstide pikkus
+
+Tuletame meelde, kuidas loendamine toimis. Loendage kokku, mitu sõna on igas failis. Ja kuva see samuti nagu peatükkide arvgi.
+
+```{r}
+
+
+
+
+
+
+```
+
+
+## Sagedusloend
+
+Loendame kokku ka mitu korda iga sõna esineb.
+
+
+```{r}
+
+
+
+
+
+
+```
+
+
+## Kuvame
+
+Kuvame ka need levinumad sõnad.
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+## Grupeerimine
+
+Kuidas saame sõnade esinemiskorrad iga teksti sees? Proovi!
+
+```{r}
+
+
+
+
+
+```
+
+
+# Filter käsk
+
+Otsime mõnd konkreetset sõna tekstide sõnaloendis.
+
+```{r}
+
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T) %>% 
+  filter(word=="peremees")
+
+
+```
+
+
+```{r}
+
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T) %>% 
+  filter(word=="töö")
+
+
+```
+
+Kuidas saame kümme levinumat sõna ühes konkreetses tekstis? Proovi.
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+Kuidas saame kümme levinumat sõna igas tekstis? Proovi.
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+
+### Absoluutarv vs sagedus
+
+Nagu meil on varem juttu olnud, tasub tekstide võrdlemisel vaadata sagedust. Selleks jagame igas grupis leitu arvu grupisisese kogusummaga.
+
+```{r}
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T) %>% 
+  mutate(freq=n/sum(n))%>% 
+  filter(row_number()<10) %>%  #sort pani need juba õigessejärjekorda
+  ggplot(aes(y=word,x=freq,color=filename))+
+  geom_point()+
+  guides(color=F)
+
+
+```
+
+
+Kohanda! Vali välja üks sõna ning kuva selle sagedus eri tekstides.
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+
+
+# Regulaaravaldised
+
+Nagu öeldud on tihti meil vaja leida mitut seotud sõna. Võtame aluseks sagedustabeli ja otsime sealt 'hobu'-ga algavat sõna.
+
+```{r}
+
+words %>%
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n))
+
+```
+
+
+```{r}
+
+words %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  filter(str_detect(word,"^hobu"))
+
+```
+
+Me võime kõikide eri vormide esinemisarvud kokku liita ja kuvada neid.
+
+```{r}
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  filter(str_detect(word,"^hobu")) %>%
+  ggplot(aes(y=filename,x=freq))+
+  geom_point()
+
+```
+
+Lisades veel korra count() funktsiooni, saame me vaadata ka mitmes tekstis see sõnavorm esineb sõna esineb.
+
+```{r}
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  filter(str_detect(word,"^hobu")) %>%
+  ungroup() %>% 
+  count(word,sort=T)
+
+```
+
+Esialgu on meil sõnad loendatud iga vormi kaupa. Need tuleb meil kokku liita. Selleks on olemas käsk summarise(), mis käitub samamoodi kui mutate(), aga kaotab ära korduvad read ja ebavajalikud tulbad.
+
+```{r}
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  filter(str_detect(word,"^hobu")) %>%
+  summarise(freq=sum(freq)) %>% # tekstid on grupeeritud failinime kaupa
+  ggplot(aes(y=filename,x=freq))+
+  geom_point()
+
+```
+
+
+Moodusta üks otsing regulaaravaldisega ja kujuta selle tulemust. (Märkus: tabelis on hetkel iga sõna eraldi real, seega ei saa regulaaravaldisega otsida siin kahesõnalisi ühendeid.)
+
+```{r}
+
+
+
+
+
+
+
+```
+
+
+
+### Tüüpmuutujate loomine regulaaravaldiste kaudu
+
+Nüüd vaatasime kuidas regulaaravaldisi sai kasutada andmete filtreerimiseks. Neis saab kasutada ka uute muutujate tegemiseks. Kui str_detect() andist TÕENE või VÄÄR vastuse sõnaridade kohta, siis str_extract() võtab uude muutujasse välja kattuva sõnaosa.
+
+
+```{r}
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  filter(str_detect(word,"^kirik")|str_detect(word,"^kõrts")) %>%
+  ggplot(aes(y=filename,x=freq))+
+  geom_point()
+
+```
+
+
+```{r}
+
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  ungroup() %>% 
+  mutate(searchterm=str_extract(word,"^kirik|^kõrts")) %>% 
+  #filter(searchterm=="kirik"|searchterm=="kõrts")+
+  filter(!is.na(searchterm)) %>%  # kasutame ainult ridu, kus on olemas info searchterm tulbas
+  group_by(filename,searchterm) %>% 
+  summarise(freq=sum(freq)) %>% # tekstid on grupeeritud failinime kaupa
+  ggplot(aes(y=filename,x=freq,color=searchterm))+
+  geom_point(alpha=0.5)
+
+
+
+```
+
+
+
+Moodusta 2-3 otsingut ja kuva nende sagedusi erinevates raamatutes.
+
+
+```{r}
+
+
+
+```
+
+
+
+Kitsenda oma sõnaotsingut, nii et me otsime ainult ühe autori teoseid. (Vihje: filter() või str_detect().
+
+```{r}
+
+
+
+
+```
+
+
+Näidis ühe teose kohta
+
+```{r}
+
+words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  mutate(searchterm=str_extract(word,"^kirik|^kõrts")) %>% 
+  group_by(filename,searchterm) %>% 
+  filter(!is.na(searchterm)) %>% 
+  summarise(freq=sum(freq)) %>% 
+  filter(str_detect(filename,"oigus"))
+  
+
+```
+
+## Raamatute sisud
+
+Eemaldame raamatuist stopsõnad. Proovi ise!
+
+```{r}
+words %>% 
+  anti_join(stopwords,"word")
+```
+
+Loeme kokku iga teose levinumad sõnad kui stopsõnad on kõrvale jäetud. Vaatame esimest 100 sõna lähemalt.
+ 
+```{r}
+freqwords <- words %>% 
+  anti_join(stopwords,"word") %>% 
+  group_by(filename) %>% 
+  count(word,sort=T) %>% 
+  mutate(freq=n/sum(n)) %>% 
+  arrange(desc(freq)) %>% 
+  head(100)
+
+
+words %>% 
+  count(word,sort=T) %>% 
+  filter(str_detect(word,"w"))
+
+```
+ 
+Nüüd on tipus nimed, aga ka mõned levinud sõnad kirjutatuna w-ga. Stopsõnadega ühendamine ei toiminud siin kuna 'weel' ja 'wõi' ei olnud nimekirjas. Sellisel juhul tasub mõnikord sisendit käsitsi parandada. Selleks saame kasutada veel üht funktsiooni str_replace_all(), mis asendab ühe sõnajada teisega. Siin saab kasutada ka regulaaravaldis.
+
+```{r}
+freqwords <- words %>% 
+  mutate(word=str_replace_all(word,"w","v")) %>% 
+  anti_join(stopwords,"word") %>% 
+  group_by(filename) %>% 
+  count(word,sort=T) %>% 
+  mutate(freq=n/sum(n)) %>% 
+  arrange(desc(freq)) %>% 
+  head(100)
+
+```
+
+Samamoodi nagu varem võime jätta kõrvale ka suurtähega algavad sõnad. Selleks peame me muutma ühestaja parameetreid.
+
+```{r}
+
+freqwords <- texts %>% 
+  unnest_tokens(word,txt,to_lower=F) %>% 
+  mutate(word=str_replace_all(word,"w","v")) %>% 
+  anti_join(stopwords,"word") %>% 
+  group_by(filename) %>% 
+  filter(!str_detect(word,"[A-ZÕÄÖÜ]")) %>% 
+  count(word,sort=T) %>% 
+  mutate(freq=n/sum(n)) %>% 
+  arrange(desc(freq)) %>% 
+  head(100)
+
+
+```
+ 
+LISAMATERJAL NÄIDISEKS: Sisulise ülevaate saamiseks võime ka arvutada välja sõnad, mis raamatuid teineteisest eristavad. Ilukirjandusteoseid omavahel võrreldes saab päris hea ülevaate nende sisust, sellest mis on igale teosele eriomane.
+
+```{r}
+
+keywords <- texts %>% 
+  unnest_tokens(word,txt,to_lower=F) %>% 
+  mutate(word=str_replace_all(word,"w","v")) %>% 
+  #anti_join(stopwords,"word") %>% 
+  group_by(filename) %>% 
+  filter(!str_detect(word,"[A-ZÕÄÖÜ]")) %>% 
+  count(word,sort=T) %>% 
+  bind_tf_idf(word,filename,n) %>% 
+  arrange(desc(tf_idf)) %>% 
+  head(100)
+
+```
+
+Proovi ise! Vali välja üks teos ja väljasta selle 10 eristavat sõna, jättes kõrvale suurtähte sisaldavad sõnad.
+
+```{r}
+
+
+
+```
+
+
+## Tulemuste salvestamine
+
+Kui me saame tulemused, mida me soovime esitada, kas hiljem või väljaspool RStudiot, siis peaksime need ka salvestama. Selleks on olemas tabelite puhul read_ käskude asemel write_ käsud. ggplot2 graafikuid saab salvestada funktsiooniga ggsave().
+
+```{r,eval=T}
+tabel <- words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  mutate(searchterm=str_extract(word,"^mets|^maa|^linn")) %>% 
+  filter(!is.na(searchterm)) %>%  # kasutame ainult ridu, kus on olemas info searchterm tulbas
+  group_by(filename,searchterm) %>% 
+  summarise(freq=sum(freq))
+
+tabel %>% 
+  write_tsv("data/mets_maa_linn.tsv")
+```
+
+
+```{r,eval=T}
+graafik <- words %>% 
+  group_by(filename) %>% 
+  count(word,sort=T)  %>% 
+  mutate(freq=n/sum(n)) %>% 
+  mutate(searchterm=str_extract(word,"^mets|^maa|^linn")) %>% 
+  filter(!is.na(searchterm)) %>%  # kasutame ainult ridu, kus on olemas info searchterm tulbas
+  group_by(filename,searchterm) %>% 
+  summarise(freq=sum(freq)) %>% # tekstid on grupeeritud failinime kaupa
+  ggplot(aes(y=filename,x=freq,color=searchterm))+
+  geom_point(alpha=0.5)
+
+ggsave("figures/mets_maa_linn.png",graafik)
+```
+
+
+# Kodutöö
+
+Siin on mõned harjutused tehtu kinnistamiseks. Proovi ära teha vähemalt 4 7-st ülesandest.
+
+
+1. Vali välja üks teos tänasest komplektist. Loe see fail sisse ja nummerda peatükid.
+
+```{r}
+
+
+
+
+```
+
+
+2. Tee tekstiväljadest sõnaväljad, salvesta iga sõna juures asukohainfo.
+
+```{r}
+
+
+
+
+```
+
+
+3. Vali välja kolm sõna ning kuva nende asukohad teoses
+
+```{r}
+
+
+
+```
+
+
+4. Arvuta välja nende kolme sõna sagedused igas peatükis.
+
+```{r}
+
+
+
+```
+
+
+5. Otsi kolme terminit regulaaravaldiste abil nii, et eri käändevormid ja tuletised satuksid samale kujule. Kuva nende asukohad tekstis.
+
+```{r}
+
+
+
+
+```
+
+
+6. Loe kokku vastete sagedused tekstis.
+
+```{r}
+
+
+
+```
+
+
+7. Võta kokku 10 kõige sagedasemat sõna ning esita nende sagedused kolmes vabalt valitud teoses.
+
+```{r}
+
+
+
+
+```
+
+

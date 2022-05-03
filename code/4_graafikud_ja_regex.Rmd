@@ -1,0 +1,800 @@
+---
+title: "Graafikud ja regex"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Rmarkdown märkmik
+
+Täna kolime ümber tavaliselt R-i faililt Rmarkdown märkmikusse (.Rmd lõpuga). Rmarkdown on viis kirjutada R-is koos koodi ja teksti. Kood paigutub siin eraldi koodiblokkidesse. Loomiseks kopeeri olemasolev koodiblokk, kasuta 'Insert -> R' või vajuta ctrl+alt+i (cmd+alt+i Mac-il) olles Rmarkdowni failis. Koodi, sellega tehtud arvutuste ja vahetekstide kokkusidumiseks saab kasutada funktsiooni Knit ülal. Nii saab teha nt html, pdf või doc faile.
+
+```{r setup,echo=F}
+# knit funktsioon nõuab natuke ühe parameetri seadmist et failid üles leitaks
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+```
+
+
+## Kordamine
+
+Iga kord alustades käivitame kõigepealt paketi.
+
+```{r}
+library(tidyverse)
+library(tidytext)
+
+```
+
+Ja loeme sisse andmed.
+
+```{r}
+edetabel <- read_tsv("data/eesti_top40/eesti_skyplus_top40_1994-2018.tsv")
+```
+
+
+Sõnaloendi saab unnest_tokens() funktsiooniga.
+
+```{r}
+laulusonad <- edetabel %>%
+  unnest_tokens(word,lyrics)
+```
+
+Seda saab filtreerida nii metainfo kui sõnade kaupa.
+
+```{r}
+laulusonad %>%
+  filter(artist=="Smilers")
+
+laulusonad %>%
+  filter(word=="joodik")
+```
+
+Loendamiseks on count() funktsioon. Sellega saame nii edetabeli kui sagedussõnastiku
+```{r}
+parimad_artistid <- edetabel %>% 
+  count(artist,sort=T)
+
+sageduss6nastik <- laulusonad %>%
+  filter(language=="et") %>% 
+  count(word,sort=T)
+```
+
+Korpuste omavahelisel võrdlusel kasutame suhtelisi väärtusi
+
+```{r}
+sageduss6nastik <- sageduss6nastik %>% 
+  mutate(freq=n/sum(n))
+```
+
+Tabeleid saab ühendada join käsuga.
+```{r}
+ilukirj_sonad <- read_tsv("data/raudvere_uiboaed_mitmikud/token_1_grams.tsv",col_names = c("word","n_token","n_docs"))
+ilukirj_sonad <- ilukirj_sonad %>%
+  mutate(prop_ilukirj=n_token/sum(n_token))
+yhend <- sageduss6nastik %>%
+  left_join(ilukirj_sonad, by="word")
+```
+
+Tihti eemaldame stopsõnad. Selleks on teine join tüüpi käsk.
+```{r}
+stopsonad <- read_tsv("data/uiboaed_stopwords/estonian-stopwords.txt",col_names = "word")
+yhend %>% 
+  anti_join(stopsonad,"word")
+```
+
+Nii saame võrrelda kahte korpust sageduste alusel
+```{r}
+vrd <- yhend %>% 
+  anti_join(stopsonad,"word") %>% 
+  mutate(ratio1=freq/prop_ilukirj,ratio2=prop_ilukirj/freq)
+```
+
+Andmeid saame järjestada arrange() käsuga, järjekorranumbri panna mutate(x=row_number()) kaudu
+```{r}
+vrd %>% 
+  arrange(desc(ratio1)) %>% 
+  mutate(ratio1_rank=row_number())
+
+vrd %>% 
+  arrange(desc(ratio2)) %>% 
+  mutate(ratio2_rank=row_number())
+```
+
+Sageduse võime arvutada ka mõne laulu sees, kasutades group_by().
+```{r}
+sagedused_lauludes <- laulusonad %>%
+  group_by(artist,song) %>% 
+  filter(language=="et") %>% 
+  count(word,sort=T)
+```
+
+
+Samamoodi group_by-ga saame näiteks sõnade asukohad laulude sees.
+```{r}
+
+asukohad <- laulusonad %>% 
+  group_by(artist,song) %>% 
+  filter(language=="et") %>% 
+  mutate(word_nr=row_number())
+  
+
+```
+
+
+
+## Graafikud
+
+Milleks kõik see täpne töötlemine? Enamasti tahame me ühest korpusest teada saada midagi väga konkreetset - mitte lihtsalt üldiselt, mis seal on, vaid vastust kindlale küsimusele. Seal on filter() ja arrange() meie sõbrad, aga veel paremini saab mõnd konkreetset aspekti mõista visuaalselt. Graafikute tegemiseks on R-is mõnusad vahendid - eriti populaarne on ggplot().
+
+Graafikute tegemisel võib mõelda, et me lisame graafikule aina uusi kihte juurde. Võime näidisena teha graafiku parimatest artistidest.
+
+```{r}
+top10 <- edetabel %>% 
+  count(artist,sort=T) %>% 
+  filter(row_number()<11)
+```
+
+
+Graafiku loomise alustamiseks kasutame sama toru %>% funktsiooni. Alustame tühjast graafikust.
+
+```{r}
+
+top10 %>% 
+  ggplot()
+
+```
+
+Me tahame, et graafikul oleks x teljel artisti nimi ja y teljel number
+```{r}
+
+top10 %>% 
+  ggplot(aes(x=artist,y=n))
+
+
+```
+
+Lisame nüüd punktikihi, kus iga punkt paikneb oma artisti kohal ning tähistab seda, kui palju lugusid tal oli.
+
+```{r}
+
+top10 %>% 
+  ggplot(aes(x=artist,y=n))+
+  geom_point()
+
+```
+
+Ja punktid jõudsidki graafikule. Antud juhul võiks ehk tulpdiagramm sobida paremini kui punktid. Asendame selle jaoks geom_point() funktsiooni geom_col() funktsiooniga. X-telg ja y-telg võivad jääda samaks. Tulbad annavad mastaabist parema ülevaate.
+
+```{r}
+
+top10 %>% 
+  ggplot(aes(x=artist,y=n))+
+  geom_col()
+
+```
+
+Sõnade järjestus on enamasti tähestiku järjekorras. Tehnilisemalt teeb ggplot nad enne faktormuutujaks (kui nad juba ei ole) ja loob neile järjestuse. Lihtne viis järjestust muuta on käsu fct_reorder() kaudu, kus tuleb lihtsalt näidata, mis tulpa järjestada ja siis anda järjestamise alus. 
+
+Antud juhul püüame siis järjestada artisti tulba tasemeid n tulba väärtuste alusel, kahanevas järjekorras. Selle jaoks võime kirjutada fct_reorder(artist, -n). Miinusmärk n ees muudab pöörab ümber numbrite skaala kuna miinusmärgiga on suuremad numbrid väiksema väärtusega ehk -100 on väiksem kui -1.
+
+```{r}
+
+top10 %>% 
+  mutate(artist=fct_reorder(artist,-n)) %>% 
+  ggplot(aes(x=artist,y=n))+
+  geom_col()
+
+
+
+```
+
+Ilusama graafiku jaoks on võimalik jälle telgi sättida veidi, seekord võime ära vahetada x-telje ja y-telje. Selle jaoks on käsk coord_flip(). Sellisel juhul ehk sobib ka paremini järjestada artistid miinusmärgita n alusel.
+
+```{r}
+
+top10 %>% 
+  mutate(artist=fct_reorder(artist,n)) %>% 
+  ggplot(aes(x=artist,y=n))+
+  geom_col()+
+  coord_flip()
+
+
+```
+
+### Vahekokkuvõte
+
+Peamised kihid, millega tasuks tuttav olla on:
+
+- ggplot() - aluskiht
+- geom_point() - punktgraafik, kus iga andmepunkt on punkt
+- geom_line() - joongraafik, kus need punktid on mingil alusel ühendatud joontega
+- geom_col() - tulpdiagramm, kus tulba suurus näitab väärtuse suurust
+- geom_text() - lisab teksti graafikule. teksti asukohad on samuti x ja y telje järgi
+- geom_tile() - ruudustikgraafik, kus x ja y telg määravad millise ruuduga on tegemist
+
+
+### Veel jooniseid
+
+Proovime veel. Ütleme, et me tahame teada, kuidas Smilersi lood olid läbi aegade. Paneme ehk x teljele aasta, y teljele asukoha
+
+
+```{r}
+edetabel %>% 
+  filter(artist=="Smilers") %>% 
+  ggplot(aes(x=year,y=rank))+
+  geom_point()
+```
+
+Või võime teha edetabeli Smilersi lauludest. Paneme y teljele laulunime ja x teljele taseme. 
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Smilers") %>% 
+  ggplot(aes(y=song,x=rank))+
+  geom_point()
+
+```
+
+Ja joondame nad fct_reorder() abil edetabelipositsiooni järgi. 
+
+```{r}
+edetabel %>% 
+  filter(artist=="Smilers") %>% 
+  mutate(song=fct_reorder(song,rank)) %>% 
+  ggplot(aes(y=song,x=rank))+
+  geom_point()
+```
+
+Kui laul esines mitu korda, siis võeti nende esinemise keskmine (vt ?fct_reorder täpsema info kohta). Võime järjestada nad parima koha järgi tehes enne lisatulba, mida kasutada järjestamiseks.
+
+```{r}
+edetabel %>% 
+  filter(artist=="Smilers") %>% 
+  group_by(song) %>% 
+  mutate(min_rank=min(rank)) %>% 
+  ungroup() %>% 
+  mutate(song=fct_reorder(song,min_rank)) %>% 
+  ggplot(aes(y=song,x=rank))+
+  geom_point()
+```
+
+Proovige ise! Tehke ühe artisti laulude ülevaade.
+
+```{r}
+
+
+
+
+
+```
+
+
+
+Me saame edetabeleid teha ka sõnadega
+
+```{r}
+
+laulusonad %>% 
+  count(word,sort=T)%>% 
+  filter(row_number()<11) %>% 
+  mutate(word=fct_reorder(word,n)) %>% 
+  ggplot(aes(x=word,y=n))+
+  geom_col()+
+  coord_flip()
+
+```
+
+Me võime neid kihte ka kombineerida. Nt võtame Põhja-Tallinna lood.
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Põhja-Tallinn") %>% 
+  ggplot(aes(x=year,y=rank))+
+  geom_point()
+
+
+```
+
+Ja lisame neile tekstikihi, kasutades selleks geom_text() funktsiooni ja label parameetrit.
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Põhja-Tallinn") %>% 
+  ggplot(aes(x=year,y=rank, label=song))+
+  geom_point()+
+  geom_text(vjust=-1)
+
+
+```
+
+Lisaks võime lisada neile ka joone. Ütleme, et graafik grupeeriks laule nende nimede alusel. Nii saavad sama loo eri aastakäigud ühendatud kokku.
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Põhja-Tallinn") %>% 
+  ggplot(aes(x=year,y=rank, label=song,group=song))+
+  geom_point()+
+  geom_line()+
+  geom_text(vjust=-1)
+
+```
+
+Lisaks võime värvida nad kõik ka aastakäigu järgi. Selleks et aastakäiku lugeda kategoorilise muutujana, paneme selle ümber funktsiooni factor().
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Põhja-Tallinn") %>% 
+  ggplot(aes(x=year,y=rank, label=song,group=song,color=factor(year)))+
+  geom_point()+
+  geom_line()+
+  geom_text(vjust=-1)
+
+
+```
+
+
+Viimaks võime anda tabelile ka pealkirja labs() funktsiooni kaudu. Sarnaselt nagu aes() funktsiooniski, tuleb lihtsalt anda parameetrite nimed selle järgi, kuhu info saata. title määrab pealkirja, x määrab x-telje väärtuse, y määrab y-telje väärtuse.
+
+```{r}
+
+edetabel %>% 
+  filter(artist=="Põhja-Tallinn") %>% 
+  ggplot(aes(x=year,y=rank, label=song,group=song,color=factor(year)))+
+  geom_point()+
+  geom_line()+
+  geom_text(vjust=-1)+
+  labs(title="Pealkiri läheb siia",x="x-telg",y="y-telg")
+
+```
+
+
+
+### Asukohad tekstis
+
+Me võime neid graafikuid kasutada tekstidest ülevaate saamiseks. Võtame näiteks asukohad tekstis.
+
+```{r}
+asukohad <- laulusonad %>% 
+  group_by(artist,song,year) %>% 
+  mutate(word_nr=row_number()) %>% 
+  ungroup()
+```
+
+Saame lihtsalt kuvada konkreetse sõna asukoha erinevates lauludes.
+
+```{r}
+asukohad %>% 
+  filter(word=="armastus") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr))
+```
+
+Võime vaadata seda mõne teise sõna kohta.
+```{r}
+asukohad %>% 
+  filter(word=="la") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr))
+```
+
+
+Võime ka otsida mitut sõna korraga, kasutades või | märki. Saame märkida sõnad joonisel eri värvidega. 
+
+```{r}
+asukohad %>% 
+  filter(word=="la"|word=="na") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=word))
+```
+
+Antud joonisel lähevad numbrid 0-st 300-ni, kus igal sõna on üks number. Teine viis vaadata oleks suhteline asukoht laulu sees. Selleks peame me asukohad jagama sõnade arvuga.
+
+```{r}
+asukohad <- asukohad %>% 
+  group_by(artist,song,year) %>% 
+  mutate(n=n(),asukoht=word_nr/n) %>% 
+  ungroup()
+```
+
+Võime kontrolliks märkida üles ka laulude lõpppunktid. Tundub, et suhteline graafik oleks veidi teistsugune.
+```{r}
+asukohad %>% 
+  filter(word=="la"|word=="na") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=word))+
+  geom_point(aes(y=song,x=n))
+```
+
+Ja kuvame ka suhtelise asukoha graafiku. Nüüd on selgemini näha, mis asub laulu lõpus, mis keskkohas, mis alguses.
+```{r}
+asukohad %>% 
+  filter(word=="la"|word=="na") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=asukoht,color=word))
+```
+
+
+
+Proovi ise! Vali mõni lugu ja sõna selles ning vaata, mis asukohtadel ta esineb.
+
+```{r}
+
+#---------------------------------------------
+
+
+
+
+
+
+
+
+#---------------------------------------------
+
+```
+
+
+### Otsingud ja regulaaravaldised
+
+
+Seni oleme filtreerinud ainult täpse samasuse kaudu. See ei arvesta võimalusega, et meil on sõna käändes, pöördes või mõnel muul moel muudetud. Nt sõna armastus esineb kokku 98 korda.
+
+```{r}
+sageduss6nastik %>% 
+  filter(word=="armastus")
+```
+
+Täpse samasuse asemel võimaldab str_detect() otsida osalist samasust. str_detect() avab ka võimaluse kasutada otsingutel regulaaravaldisi. Sellega saame veel 11 tüüpi.
+
+```{r}
+sageduss6nastik %>% 
+  filter(str_detect(word,"armastus"))
+```
+
+Kombineerides sõna regulaaravaldise märkidega saame otsida spetsiifilisemaid vorme.
+```{r}
+sageduss6nastik %>% 
+  filter(str_detect(word,"^töö"))
+```
+
+Näiteks võime piirduda sõna algvormidega.
+```{r}
+sageduss6nastik %>% 
+  filter(str_detect(word,"töö$"))
+```
+
+Vaatame selle mõjusid kujutamisele
+```{r}
+asukohad %>% 
+  filter(word=="armastus") %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr))
+```
+
+
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"armastus")) %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr))
+```
+
+
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"armastus")) %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=word))
+```
+
+Vaatame sama töö kohta. Taas näeme hulk erivorme
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"töö")) %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=word))
+```
+
+Kui me nüüd otsime korraga nii armastuse kui töö erivorme, siis saame juba üpris hoomamatu hulga vorme. Meil ei ole neid kuidagi võimalik grupeerida ka niisama.
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"armastus|töö")) %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=word))
+```
+
+Tüüpide saamiseks võime kasutada eraldi funktsiooni str_extract(), mis eraldab sõnast regulaaravaldisele vastava üksuse. See eraldatud üksus tuleb kuhugi paigutada, mistõttu str_extract() käib mutate() käsu sisse.
+
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"armastus|töö")) %>% 
+  mutate(type=str_extract(word,"armastus|töö")) %>% 
+  ggplot()+
+  geom_point(aes(y=song,x=word_nr,color=type))
+```
+
+Selle järgi saame näiteks kätte kui palju need osavormid koos esinevad. Tundub, et töö ja armastuse kattuvus ei ole kuigi suur.
+
+Muidugi võime sama tulemuse lihtsalt välja arvutada. Ainult kolmes laulus on mõlemast tüübist sõnu.
+```{r}
+asukohad %>% 
+  filter(str_detect(word,"armastus|töö")) %>% 
+  mutate(type=str_extract(word,"armastus|töö")) %>% 
+  count(type,song) %>% 
+  count(song,sort=T)
+```
+
+
+Proovi ise! Vali välja kaks sõnatüve ja vaatle 1) selle erinevaid vorme, 2) kahe vormitüübi asukohti laulus.
+```{r}
+
+
+
+
+
+
+```
+
+
+
+
+## Bigrammid
+
+Veel kasulikumad on regulaaravaldised siis kui meil on sõnast pikemad üksused vaatluse all. Vaatleme nüüd bigramme - ehk kahesõnalisi tekstijuppe. Selle saab teha samamoodi unnest_tokens() abil, andes talle täiendavaid parameetreid. 1-sõnalised üksused on vaikevalik, muid võimalusi näeb ?unnest_tokens-i kaudu.
+
+```{r}
+
+bigrams <- edetabel %>%
+  unnest_tokens(bigram, lyrics, token = "ngrams", n = 2, n_min = 2)
+
+```
+
+Nagu varem sõnadega, võime me filtreerida seda tabelit ka fraasi kaupa. Näiteks 'ei saa' esinemised eri lauludes saame kätte niiviisi. Päris paljudes lauludes kordub fraas 'ei saa' mitmeid kordi. Tähele võib panna, et sellisel juhul on aga oluline, et fraas oleks täpselt selline nagu on kirjeldatud.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(bigram=="ei saa")
+
+```
+
+Me teame varem koostatud sõnaloendite põhjal, et sõna 'ei' on neis tekstides üldse sage. Kui me nüüd tahaks teada, millises kontekstis sõna 'ei' esineb, ei saa me ette kirjutada kõiki eri variante. Sellisel puhul on meil võimalik kasutada käske tekstiosade kattuvuseks ning regulaaravaldisi. Tidyverse pakettides on ka tekstidega töötamiseks eraldi osa stringr, kus on meid aitavad kaks funktsiooni str_detect(), mis kontrollib, kas tekstis sisaldub ettekirjutatud jupp ja str_extract(), mis eraldab kirjutatud jupi tekstist.
+
+- str_detect(muutuja, "sõne") - kontrolli, kas tekstis esineb selline järjend
+- str_extract(muutuja, "sõne") - leia selline järjend tekstis ning esita leitud järjend
+
+Need funktsioonid võtavad sisendina vaikimisi regulaaravaldisi, mis avardab meie otsimisvõimekust oluliselt. Otsides ainult järjendit 'ei saa' leiame, et meie esialgne otsing ei leidnud varianti, ei saagi, mida kordub ühe loo sees isegi kõige rohkem. Nimelt läheb edetabeli tippu toe tag pankrott, kus fraas 'ei saagi' esineb suisa 42 korda. Kuivõrd ta on tähenduselt üsna sarnane, siis on seda meilgi ehk oluline teada.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"ei saa"))
+
+```
+
+Me võime ka otsida kõiki sarnaseid fraase, mis algavad eitusega. Selleks otsime sõna ei, millele järgneb tühik ja siis ükskõik milline tähekombinatsioon. Ja saame, et neid eitavas vormides fraase on lugude seas veel. ei-ei, ei saa, ei hooli, ei pea, ei huvita ei lase, jne.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"ei [a-zõäöü]+"))
+
+```
+
+Teine viis leida kõik fraasid, mis algavad sõnaga ei, on kasutada regulaaravaldiste teksti alguse tähist ^. Nii teab käsk, et 'ei' peab olema fraasi alguses.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"^ei "))
+
+
+```
+
+Tõtt-öelda bigrammidega piisab ka tühikust, kuna neis on tühik alati esimesest sõnast paremal.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"ei "))
+
+```
+
+Võime proovida otsida ka näiteks sidesõnale ja järgnevaid sõnu.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"ja [a-zõäöü]+"))
+
+```
+
+Me võime otsida sedasi ükskõik mida.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"ma "))
+
+
+```
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"jama[ a-zõäöü]+"))
+
+```
+
+Proovige leida nüüd kõik fraasid, mis sisaldavad eestit ükskõik, mis kujul
+
+```{r}
+
+#---------------------------------------------
+
+
+
+
+
+
+
+
+#---------------------------------------------
+
+```
+
+
+Teine küsimus, kus regulaaravaldised kuluvad eriti ära, on kui me tahame teada saada teatud sõnavormide kohta. Näiteks meid huvitavad kõik armastusega seotud sõnad neis lauludes. Võime teha otsingu, mis hõlmaks 'armastus', 'armastama' ja selle vorme. Nii saame kätte kõik fraasid, kus on sellest mingil määral juttu.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"armast[ua]"))
+
+```
+
+Kui me aga tahame küsida sõna eri vormide kohta, võime me leidude vasted uude tabeli tulpa panna. str_extract() võtab tekstist välja täpselt sellise vormi, mis me leidsime.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"armast[ua]")) %>% 
+  mutate(vorm=str_extract(bigram,"armast[ua]"))
+
+```
+
+Selleks, et saada tervet sõna, peame regulaaravaldist pikendama, et ta võtaks kaasa kõik tähestiku tähed, aga mitte tühikud.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"armast[ua]")) %>% 
+  mutate(vorm=str_extract(bigram,"armast[ua][a-zõäöü]+"))
+
+```
+
+
+Ja nüüd võime omakorda kokku lugeda, mis vormides need sõnad olid, ehk kui palju erinevaid fraase nende tüüpidega oli.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"armast[ua]")) %>% 
+  mutate(vorm=str_extract(bigram,"armast[ua]([a-zõäöü]+)?")) %>% 
+  count(vorm,sort=T)
+
+```
+
+Samamoodi võime võtta näiteks välja kõik sõnad, mis järgnevad sõnale armastus, ükskõik, mis vormis. Lisame otsingule sõna alguse tähise, ning võtame välja kõik, mis järgneb tühikule. Nagu arvata oli on ikka kõige sagedasemad vormid muidu ka levinud sõnad. Samas pidagem meeles, et praegu me vaatasime, mitmes laulus need fraasid on. Me võime ka vaadata mitu korda fraase esineb kokku.
+
+```{r}
+
+bigrams %>%
+  count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"^armast[ua]")) %>% 
+  mutate(vorm=str_extract(bigram," [a-zõäöü]+")) %>% 
+  count(vorm,sort=T)
+
+```
+
+Tidyverse %>% märgiga kirjutatud koodis on selleks hea võimalus. Me võime lihtsalt mõne käsu välja kommenteerida # trellidega.
+
+```{r}
+
+bigrams %>% 
+  #count(bigram,song,sort=T) %>%
+  filter(str_detect(bigram,"^armast[ua]")) %>% 
+  mutate(vorm=str_extract(bigram," [a-zõäöü]+")) %>% 
+  count(vorm,sort=T)
+
+```
+
+
+Proovige leida, mis vormides 'eesti' lauludes esineb.
+
+```{r}
+
+#---------------------------------------------
+
+
+
+
+
+
+
+
+#---------------------------------------------
+
+```
+
+
+
+
+### Veel üks joonis
+
+Lõpuks võime teha ühe kokkuvõtva graafiku, mille jaoks me kasutame ainult juba meile teadaolevaid andmemuutmisviise. Püüame kujutada korduvate sõnade esinemist ühe laulu sees. Siin valime kõigepealt ühe loo, grupeerime sõnade kaupa ning kogume informatsiooni tema esinemise kohta. Mitmes omasugustest ta oli ja kui palju neid kokku oli. Eemaldame vähem levinumad sõnad ja kuvame x-teljel asukoha, y-teljel mitmes see sõna oli ja kasutame kõigeks selleks nüüd mitte punkti- vaid tekstikihti, lisades sildiks sõna enda.
+
+```{r}
+
+asukohad %>% 
+  filter(song=="Mina ka ft. reket") %>% 
+  group_by(word) %>% 
+  mutate(n=n(),nr_per_word=row_number()) %>% 
+  ungroup() %>% 
+  filter(n>4) %>% 
+  ggplot()+
+  geom_text(aes(x=asukoht,y=nr_per_word,label=word))
+
+```
+
+Mõnel puhul peame olema ettevaatlik, et me ikka võtame ühe loo esinemise korraga. Kui sõnad on topelt või kolmekordselt, võib graafik tulla segasem.
+
+```{r}
+
+asukohad %>% 
+  filter(song=="Käime katuseid mööda"&year==2003) %>% 
+  group_by(word) %>% 
+  mutate(n=n(),nr_per_word=row_number()) %>% 
+  ungroup() %>% 
+  filter(n>1) %>% 
+  ggplot()+
+  geom_text(aes(x=asukoht,y=jitter(nr_per_word,5),label=word))
+
+```
+
+
+
+Proovi ise! Vali mõni lugu ja kujuta selles sagedalt esinevaid sõnu.
+
+```{r}
+
+#---------------------------------------------
+
+
+
+
+
+
+
+
+#---------------------------------------------
+
+```
+
