@@ -7,7 +7,9 @@
 # https://www.gapminder.org/answers/how-does-income-relate-to-life-expectancy/
 
 
-# Kui te kasutate koodi oma arvutis on vaja jooksutada järgmine rida. See kontrollib, kas installitud on vajalikud paketid ja kui neid pole, siis installib need.
+# Kui te kasutate koodi oma arvutis on vaja jooksutada järgmine rida. See kontrollib, kas installitud on vajalikud paketid ja kui neid pole, siis installib need. Arvutiklassis tuleb enne tidyverse-i uuesti installida rlang, kuna kohalik versioon on liiga vana.
+
+#install.packages("rlang")
 lapply(c("gapminder","tidyverse"), 
        function(x) if(!is.element(x, installed.packages())) install.packages(x, dependencies = T))
 
