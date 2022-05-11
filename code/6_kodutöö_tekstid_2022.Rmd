@@ -1,7 +1,7 @@
 ---
 title: "Kodutööd tekstianalüüsi materjalide põhjal"
 author: "OMA NIMI SIIA"
-date: "12/05/2021"
+date: "11/05/2022"
 output: html_document
 ---
 
@@ -9,11 +9,11 @@ output: html_document
 
 ## Variant 1: loovtöö.
 
-Leia ise vähemalt kolm teksti ning kasuta õpitud vahendeid väikese tekstianalüüsi tegemiseks. Raporti pikkus u. 2-3 lk (kood ei loe), aga eelkõige on oluline lihtsalt, et leitud probleem on lahendatud.. Põhjendage, miks te parasjagu midagi otsisite, kirjeldage protsessi ja leidude põhjal tehtavaid järeldusi. Raport on soovitatud esitada Rmd formaadis, aga võib kasutada ka docx, pdf või html formaati. Võib kasutada ka ilukirjanduse tekste või jagatud vanema ajakirjanduse otsinguid (link moodle-is).
+Leia ise vähemalt kolm teksti ning kasuta õpitud vahendeid väikese tekstianalüüsi tegemiseks. Raporti pikkus u. 2-3 lk (kood ei loe), aga eelkõige on oluline lihtsalt, et leitud probleem on lahendatud.. Põhjendage, miks te parasjagu midagi otsisite, kirjeldage protsessi ja leidude põhjal tehtavaid järeldusi. Raport on soovitatud esitada Rmd formaadis, aga võib kasutada ka docx, pdf või html formaati.
 
 Käsitleda võiks vähemalt:
 - midagi sõnasageduste kohta.
-- midagi sõnast pikemate üksuste kohta
+- mõni otsing kasutades regulaaravalisi
 - midagi asukohtade kohta
 - vähemalt kahe teksti või tekstiosa võrdlust mingil viisil
 - analüüs võiks sisaldada vähemalt kahte pilti.
