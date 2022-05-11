@@ -338,7 +338,14 @@ peatykid_sonad %>%
 Võime ka siin nüüd jätta kõrvale suurtähtedega sõnad. Kas meil on tark suurtähed sisse jätta või mitte oleneb küsimusest. Muidu kui meil on sõna "ja" väikse ja suure tähega, siis loeb meie kood neid eraldi. Ja samuti on stopsõnade nimistu algselt ainult väikeste tähtedega. (Seda saab muidugi muuta.)
 
 ```{r}
-peatykid_sonad %>% 
+
+
+peatykid_sonad2 <- raamat1_sonad2 %>% 
+  group_by(chapter) %>% 
+  count(word,sort=T) %>% 
+  mutate(sagedus=n/sum(n))
+
+peatykid_sonad2 %>% 
   anti_join(stopwords,"word") %>% 
   filter(!str_detect(word,"[A-ZÕÄÖÜ]")) %>%
   mutate(row_number=row_number()) %>% 

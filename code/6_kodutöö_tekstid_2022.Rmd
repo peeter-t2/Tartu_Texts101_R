@@ -1,0 +1,308 @@
+---
+title: "Kodutööd tekstianalüüsi materjalide põhjal"
+author: "OMA NIMI SIIA"
+date: "12/05/2021"
+output: html_document
+---
+
+# Kodutöö
+
+## Variant 1: loovtöö.
+
+Leia ise vähemalt kolm teksti ning kasuta õpitud vahendeid väikese tekstianalüüsi tegemiseks. Raporti pikkus u. 2-3 lk (kood ei loe), aga eelkõige on oluline lihtsalt, et leitud probleem on lahendatud.. Põhjendage, miks te parasjagu midagi otsisite, kirjeldage protsessi ja leidude põhjal tehtavaid järeldusi. Raport on soovitatud esitada Rmd formaadis, aga võib kasutada ka docx, pdf või html formaati. Võib kasutada ka ilukirjanduse tekste või jagatud vanema ajakirjanduse otsinguid (link moodle-is).
+
+Käsitleda võiks vähemalt:
+- midagi sõnasageduste kohta.
+- midagi sõnast pikemate üksuste kohta
+- midagi asukohtade kohta
+- vähemalt kahe teksti või tekstiosa võrdlust mingil viisil
+- analüüs võiks sisaldada vähemalt kahte pilti.
+
+Õigeaegselt esitatud töö puhul võib ühe neist teemadest kõrvale jätta.
+
+## Variant 2: etteantud ülesanded.
+
+All on 30 küsimust, mida on võimalik lahendada materjalide põhjal. Mõni küsimus nõuab teistest rohkemate sammude kombineerimist, aga kõigiks on vajalikud elemendid materjalidest olemas. Õigeaegselt esitades võib nendest 5, vabal valikul, jätta tegemata, et saada maksimaalsed 30%. 
+
+Kirjuta vastused siiasamma koodijuppide vahele ja esita fail oma nimega moodle-i kaudu. Enne saatmist võiks testida, et kui R kinni panna ja käivitada kood algusest lõpuni, siis kõik töötab.
+
+## Laulusõnad
+
+1. Loe sisse tidyverse ja tidytext paketid.
+
+```{r}
+
+
+
+
+```
+
+2. Loe sisse laulusõnade andmestik.
+
+```{r}
+
+
+
+
+```
+
+3. Milline artist oli populaarseim artist 25 aasta vältel?
+
+```{r}
+
+
+
+
+```
+
+4. Milline lugu oli esimesel kohal aastal 2000?
+
+```{r}
+
+
+
+
+```
+
+5. Millisel artistil oli kõige rohkem lugusid esikümnes?
+
+```{r}
+
+
+
+
+```
+
+6. Tee tabel, kus on igal real üks sõna loo sõnadest.
+
+```{r}
+
+
+
+
+```
+
+7. Koosta sellest sagedusloend.
+
+```{r}
+
+
+
+
+```
+
+8. Eemalda stopsõnad.
+
+```{r}
+
+
+
+
+```
+
+9. Vali välja üks artist ja leia tema kümme enimkasutatud sõna mis pole stopsõnad.
+
+```{r}
+
+
+
+
+```
+
+10. Vali üks aastaarv ja leia kümme enimkasutatud sõna sel aastal, mis pole stopsõnad.
+
+```{r}
+
+
+
+
+```
+
+11. Leia sõnad, mis kordusid kõige rohkem ühe laulu sees.
+
+```{r}
+
+
+
+
+```
+
+
+12. Tee graafik ühe artisti lugude positsioonist edetabelis. X-teljele aeg, Y-teljele koht.
+
+```{r}
+
+
+
+
+```
+
+13. Võrdle 1990ndaid ja 2010ndaid. Kui suur osa lugudest on eesti, kui suur osa inglise keeles?
+
+```{r}
+
+
+
+
+```
+
+14. Regulaaravaldised: Mitu artistinime algavad a tähega.
+
+```{r}
+
+
+
+
+```
+
+
+15. Regulaaravaldised: Otsi välja kõik sõnad, mis algavad vormiga "laul". 
+
+```{r}
+
+
+
+
+```
+
+16. Regulaaravaldised: Vali välja üks käändelõpp või pöördelõpp ja otsi selles vormis sõnu tekstidest. Milline variant on kõige sagedasem nende seas?
+
+```{r}
+
+
+
+
+```
+
+
+17. Regulaaravaldised: Otsi välja kõik sõnad, mis sisaldavad vormi "laul", aga mitte sõna alguses. Mitu varianti on, mis on kõige sagedasem?
+
+```{r}
+
+
+
+
+```
+
+
+18. Regulaaravaldised: Otsi välja kõik sõnad, mis algavad vormiga "laul". Kasuta regulaaravaldisi, et leida sõnade seast tegusõnad (laulan vs laulu). Mitu leitud vormidest on tegusõnad, mitu nimisõnad?
+
+```{r}
+
+
+
+
+```
+
+19. Tee graafik top 10 artistidest 2000ndatel (järjesta esinemiskordade alusel).
+
+```{r}
+
+
+
+
+```
+
+20. Vali välja paar sagedastiesinevat sõna ja kuva nende asukohad ühes laulus.
+
+```{r}
+
+
+
+
+```
+
+## Ilukirjandus
+
+21. Vali välja üks ilukirjandusteos uiboaed_ilukirjandus komplektist. Loe see fail sisse ja nummerda peatükid.
+
+```{r}
+
+
+
+
+```
+
+22. Tee tekstiväljadest sõnaväljad, salvesta iga sõna juures asukohainfo.
+
+```{r}
+
+
+
+
+```
+
+23. Vali välja kolm sõna ning kuva nende asukohad teoses
+
+```{r}
+
+
+
+
+```
+
+24. Arvuta välja nende kolme sõna sagedused igas peatükis.
+
+```{r}
+
+
+
+
+```
+
+25. Kasuta str_detect() paindlikku otsingut ja regulaaravaldisi, et otsida kolme termini eri vorme (nt riik, riigi, riigita). Kuva nende asukohad tekstis.
+
+```{r}
+
+
+
+
+```
+
+26. Liida leitud eri vormide sagedused iga peatüki sees. Kuva nende tulemus.
+
+```{r}
+
+
+
+
+```
+
+27. Eemalda sõnadeloendist stopsõnad ja leia levinumad sõnad allesjäänud sõnadest.
+
+```{r}
+
+
+
+
+```
+
+28. Tee sõnadeloend jättes kõrvale suurtähti sisaldavad sõnad. Jäta kõrvale ka stopsõnad. Millised on teise levinumad sõnad.
+
+```{r}
+
+
+
+
+```
+
+29. Salvesta sõnaloend tabelina uude faili.
+
+```{r}
+
+
+
+
+```
+
+30. Salvesta üks oma loodud graafikutest uude faili.
+
+
+```{r}
+
+
+
+
+```
+
+
