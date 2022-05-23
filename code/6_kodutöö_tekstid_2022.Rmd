@@ -26,6 +26,13 @@ All on 30 küsimust, mida on võimalik lahendada materjalide põhjal. Mõni küs
 
 Kirjuta vastused siiasamma koodijuppide vahele ja esita fail oma nimega moodle-i kaudu. Enne saatmist võiks testida, et kui R kinni panna ja käivitada kood algusest lõpuni, siis kõik töötab.
 
+Kuna mõnel arvutil on probleeme .Rmd failides andmefailide üles leidmisega, siis käivitage kõigepealt järgmine rida. See paigutab töökataloogi .Rmd failide jaoks projektikataloogi. Mitmetes R-i versioonides seda vaja teha ei ole. Sama rida kasutasime ka 5_pikemad_tekstid.Rmd failis. Sellisel juhul peaks failiasukohad töötama täpselt samamoodi kui .R failides. Alternatiivina võiks lisada "../" iga failiasukoha ette, nt "../data/eesti_top40/eesti_skyplus_top40_1994-2018.tsv")
+
+```{r}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+
 ## Laulusõnad
 
 1. Loe sisse tidyverse ja tidytext paketid.
