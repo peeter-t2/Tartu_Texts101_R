@@ -284,7 +284,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ```
 
-28. Tee sõnadeloend jättes kõrvale suurtähti sisaldavad sõnad. Jäta kõrvale ka stopsõnad. Millised on teise levinumad sõnad.
+28. Tee sõnadeloend jättes kõrvale suurtähti sisaldavad sõnad. Jäta kõrvale ka stopsõnad. Millised on teise peatüki levinumad sõnad.
 
 ```{r}
 
