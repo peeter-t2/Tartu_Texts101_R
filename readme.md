@@ -2,7 +2,7 @@
 
 Kasutatud Tartu Ülikooli kursusel HVEE.01.006 Suurte tekstiandmete töötlemine ja analüüs humanitaarteadustes
 
-2022, Peeter Tinits (CC-BY-4.0)
+2023, Peeter Tinits (CC-BY-4.0)
 
 ## Kasutamine
 
